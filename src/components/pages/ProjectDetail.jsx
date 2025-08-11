@@ -14,7 +14,6 @@ import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
 import Button from "@/components/atoms/Button";
 import Badge from "@/components/atoms/Badge";
-import Badge from "@/components/atoms/Badge";
 import ProgressBar from "@/components/atoms/ProgressBar";
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -168,7 +167,6 @@ const loadProject = async () => {
       ...prev,
       [phaseName]: !prev[phaseName]
     }));
-  };
 };
 
   const handleBack = () => {
@@ -178,87 +176,107 @@ const loadProject = async () => {
   if (loading) return <Loading />;
   if (error) return <Error message={error} onRetry={loadProject} />;
   if (!project) return <Error message="Project not found" onRetry={handleBack} />;
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-            className="text-slate-600 hover:text-midnight"
-          >
-            <ApperIcon name="ArrowLeft" size={16} className="mr-2" />
-            Back to Projects
-          </Button>
-        </div>
-      </div>
 
-      {/* Project Title */}
-      <div className="bg-white rounded-xl p-6 shadow-card border border-slate-100">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h1 className="text-3xl font-display font-bold text-midnight mb-2">
-              {project.name}
-            </h1>
-            <div className="flex items-center space-x-4 text-slate-600">
-              <div className="flex items-center">
-                <ApperIcon name="MapPin" size={16} className="mr-1" />
-                {project.location}
-              </div>
-              <div className="flex items-center">
-                <ApperIcon name="User" size={16} className="mr-1" />
-                {project.client}
+  // Task context value
+  const taskContextValue = {
+    tasks,
+    taskLoading,
+    taskError,
+    taskFilters,
+    expandedPhases,
+    assignees,
+    phases,
+    handleCreateTask,
+    handleEditTask,
+    handleDeleteTask,
+    handleStatusChange,
+    handleFilterChange,
+    handleClearFilters,
+    togglePhase
+  };
+return (
+    <TaskContext.Provider value={taskContextValue}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="text-slate-600 hover:text-midnight"
+            >
+              <ApperIcon name="ArrowLeft" size={16} className="mr-2" />
+              Back to Projects
+            </Button>
+          </div>
+        </div>
+
+        {/* Project Title */}
+        <div className="bg-white rounded-xl p-6 shadow-card border border-slate-100">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h1 className="text-3xl font-display font-bold text-midnight mb-2">
+                {project.name}
+              </h1>
+              <div className="flex items-center space-x-4 text-slate-600">
+                <div className="flex items-center">
+                  <ApperIcon name="MapPin" size={16} className="mr-1" />
+                  {project.location}
+                </div>
+                <div className="flex items-center">
+                  <ApperIcon name="User" size={16} className="mr-1" />
+                  {project.client}
+                </div>
               </div>
             </div>
+            <StatusBadge status={project.status} />
           </div>
-          <StatusBadge status={project.status} />
         </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-xl shadow-card border border-slate-100">
+          <div className="border-b border-slate-200">
+            <nav className="flex space-x-8 px-6">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                    activeTab === tab.id
+                      ? "border-construction text-construction"
+                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                  }`}
+                >
+                  <ApperIcon name={tab.icon} size={16} />
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-6">
+            {activeTab === "overview" && (
+              <OverviewTab project={project} formatCurrency={formatCurrency} />
+            )}
+            
+            {activeTab === "tasks" && (
+              <TasksTab project={project} />
+            )}
+          </div>
+        </div>
+
+        {/* Task Modal */}
+        <TaskModal
+          isOpen={taskModal.isOpen}
+          task={taskModal.task}
+          projectId={parseInt(id)}
+          onClose={() => setTaskModal({ isOpen: false, task: null })}
+          onTaskSaved={handleTaskSaved}
+        />
       </div>
-
-      {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-card border border-slate-100">
-        <div className="border-b border-slate-200">
-          <nav className="flex space-x-8 px-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                  activeTab === tab.id
-                    ? "border-construction text-construction"
-                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                }`}
-              >
-                <ApperIcon name={tab.icon} size={16} />
-                <span>{tab.name}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-{/* Tab Content */}
-        <div className="p-6">
-          {activeTab === "overview" && (
-            <OverviewTab project={project} formatCurrency={formatCurrency} />
-          )}
-          
-          {activeTab === "tasks" && (
-            <TasksTab project={project} />
-          )}
-        </div>
-      </div>
-
-      {/* Task Modal */}
-      <TaskModal
-        isOpen={taskModal.isOpen}
-        task={taskModal.task}
-        projectId={parseInt(id)}
-        onClose={() => setTaskModal({ isOpen: false, task: null })}
-        onTaskSaved={handleTaskSaved}
-      />
-    </div>
+    </TaskContext.Provider>
   );
 };
 
@@ -503,7 +521,6 @@ const TasksTab = ({ project }) => {
   );
 };
 
-// Create a context to pass task functions to TasksTab
 // Create a context to pass task functions to TasksTab
 const TaskContext = React.createContext();
 
