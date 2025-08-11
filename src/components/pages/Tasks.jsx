@@ -13,19 +13,19 @@ const Tasks = () => {
         </div>
       </div>
 
-      {/* Coming Soon */}
+      {/* Tasks Info */}
       <div className="bg-white rounded-xl p-12 shadow-card border border-slate-100 text-center">
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-center w-20 h-20 rounded-full bg-construction/10 mx-auto mb-6">
             <ApperIcon name="CheckSquare" size={40} className="text-construction" />
           </div>
           <h2 className="text-2xl font-display font-bold text-midnight mb-4">
-            Task Management Coming Soon
+            Task Management Available
           </h2>
           <p className="text-slate-600 mb-6">
-            We're building an advanced task management system that will help you organize, assign, and track tasks across all your construction projects.
+            Task management is now available within each project! Visit any project's detail page to create, assign, and track tasks organized by construction phases.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-slate-500">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-slate-500 mb-6">
             <div className="flex items-center space-x-2">
               <ApperIcon name="Users" size={16} className="text-construction" />
               <span>Team assignments</span>
@@ -39,10 +39,13 @@ const Tasks = () => {
               <span>Progress monitoring</span>
             </div>
             <div className="flex items-center space-x-2">
-              <ApperIcon name="MessageCircle" size={16} className="text-construction" />
-              <span>Team collaboration</span>
+              <ApperIcon name="Layers" size={16} className="text-construction" />
+              <span>Phase organization</span>
             </div>
           </div>
+          <p className="text-sm text-slate-500">
+            To get started, go to <strong>Projects</strong> and select any project to access its task management system.
+          </p>
         </div>
       </div>
     </div>
