@@ -90,10 +90,8 @@ useEffect(() => {
         assigneeName: ''
       });
     }
-    setErrors({});
+setErrors({});
   }, [isOpen, task, projectId]);
-  }, [isOpen, task]);
-
   const validateForm = () => {
     const newErrors = {};
 
