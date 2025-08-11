@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import ProjectCard from "@/components/organisms/ProjectCard";
 import ProjectForm from "@/components/organisms/ProjectForm";
@@ -11,8 +12,8 @@ import Select from "@/components/atoms/Select";
 import Input from "@/components/atoms/Input";
 import ApperIcon from "@/components/ApperIcon";
 import { projectService } from "@/services/api/projectService";
-
 const Projects = () => {
+const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,10 +100,8 @@ const Projects = () => {
     }
   };
 
-  const handleProjectClick = (project) => {
-    toast.info(`Opening project details: ${project.name}`, {
-      autoClose: 2000
-    });
+const handleProjectClick = (project) => {
+    navigate(`/projects/${project.Id}`);
   };
 
   const handleFilterChange = (field, value) => {
