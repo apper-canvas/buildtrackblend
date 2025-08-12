@@ -196,7 +196,7 @@ const formData = {
     setDeleteConfirm(item);
   };
 
-  const confirmDelete = () => {
+const confirmDelete = () => {
     try {
       if (activeTab === 'materials') {
         materialService.delete(deleteConfirm.Id);
@@ -208,13 +208,12 @@ const formData = {
         subcontractorService.delete(deleteConfirm.Id);
         setSubcontractors(subcontractorService.getAll());
       }
-}
     } catch (err) {
       toast.error('Failed to delete resource');
     } finally {
       setDeleteConfirm(null);
     }
-
+  };
   const openRequestModal = (material) => {
     setRequestingMaterial(material);
     setRequestForm({ quantity: '', notes: '', urgency: 'Normal' });
