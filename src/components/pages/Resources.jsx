@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import ApperIcon from '@/components/ApperIcon';
-import Button from '@/components/atoms/Button';
-import Input from '@/components/atoms/Input';
-import Label from '@/components/atoms/Label';
-import Select from '@/components/atoms/Select';
-import Badge from '@/components/atoms/Badge';
-import { materialService, equipmentService, subcontractorService } from '@/services/api/resourceService';
-import { toast } from 'react-toastify';
+import React, { useEffect, useState } from "react";
+import { equipmentService, materialService, subcontractorService } from "@/services/api/resourceService";
+import { toast } from "react-toastify";
+import ApperIcon from "@/components/ApperIcon";
+import Select from "@/components/atoms/Select";
+import Button from "@/components/atoms/Button";
+import Badge from "@/components/atoms/Badge";
+import Label from "@/components/atoms/Label";
+import Input from "@/components/atoms/Input";
 
 const Resources = () => {
   const [activeTab, setActiveTab] = useState('materials');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [requestingMaterial, setRequestingMaterial] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,8 +26,12 @@ const Resources = () => {
 
   // Form states
   const [materialForm, setMaterialForm] = useState({
-    name: '', category: '', unit: '', quantityInStock: '', unitCost: '',
-    supplier: '', reorderLevel: '', description: ''
+    name: '', category: '', unit: '', quantityInStock: '', quantityNeeded: '',
+    quantityOrdered: '', quantityDelivered: '', unitCost: '', supplier: '', 
+    reorderLevel: '', status: 'In Stock', description: ''
+  });
+  const [requestForm, setRequestForm] = useState({
+    quantity: '', notes: '', urgency: 'Normal'
   });
   const [equipmentForm, setEquipmentForm] = useState({
     name: '', type: '', serialNumber: '', status: 'Available', location: '',
@@ -108,9 +114,10 @@ const Resources = () => {
       }
     } else {
       // Reset forms
-      setMaterialForm({
-        name: '', category: '', unit: '', quantityInStock: '', unitCost: '',
-        supplier: '', reorderLevel: '', description: ''
+setMaterialForm({
+        name: '', category: '', unit: '', quantityInStock: '', quantityNeeded: '',
+        quantityOrdered: '', quantityDelivered: '', unitCost: '', supplier: '', 
+        reorderLevel: '', status: 'In Stock', description: ''
       });
       setEquipmentForm({
         name: '', type: '', serialNumber: '', status: 'Available', location: '',
@@ -129,12 +136,15 @@ const Resources = () => {
     e.preventDefault();
     try {
       if (activeTab === 'materials') {
-        const formData = {
+const formData = {
           ...materialForm,
           quantityInStock: parseInt(materialForm.quantityInStock) || 0,
+          quantityNeeded: parseInt(materialForm.quantityNeeded) || 0,
+          quantityOrdered: parseInt(materialForm.quantityOrdered) || 0,
+          quantityDelivered: parseInt(materialForm.quantityDelivered) || 0,
           unitCost: parseFloat(materialForm.unitCost) || 0,
           reorderLevel: parseInt(materialForm.reorderLevel) || 0,
-          lastOrdered: new Date().toISOString()
+          lastOrdered: editingItem ? editingItem.lastOrdered : new Date().toISOString()
         };
         
         if (editingItem) {
@@ -198,11 +208,35 @@ const Resources = () => {
         subcontractorService.delete(deleteConfirm.Id);
         setSubcontractors(subcontractorService.getAll());
       }
+}
     } catch (err) {
       toast.error('Failed to delete resource');
     } finally {
       setDeleteConfirm(null);
     }
+
+  const openRequestModal = (material) => {
+    setRequestingMaterial(material);
+    setRequestForm({ quantity: '', notes: '', urgency: 'Normal' });
+    setShowRequestModal(true);
+  };
+
+  const handleMaterialRequest = (e) => {
+    e.preventDefault();
+    try {
+      const quantity = parseInt(requestForm.quantity);
+      if (quantity <= 0) {
+        toast.error('Quantity must be greater than 0');
+        return;
+      }
+      
+      materialService.requestMaterial(requestingMaterial.Id, quantity, requestForm.notes);
+      setMaterials(materialService.getAll());
+      setShowRequestModal(false);
+      setRequestingMaterial(null);
+    } catch (err) {
+      toast.error('Failed to submit material request');
+}
   };
 
   if (loading) {
@@ -272,8 +306,8 @@ const Resources = () => {
         </div>
 
         {/* Content */}
-        <div className="p-6">
-          {activeTab === 'materials' && <MaterialsTab data={filteredData()} onEdit={openModal} onDelete={handleDelete} />}
+<div className="p-6">
+          {activeTab === 'materials' && <MaterialsTab data={filteredData()} onEdit={openModal} onDelete={handleDelete} onRequest={openRequestModal} />}
           {activeTab === 'equipment' && <EquipmentTab data={filteredData()} onEdit={openModal} onDelete={handleDelete} />}
           {activeTab === 'subcontractors' && <SubcontractorsTab data={filteredData()} onEdit={openModal} onDelete={handleDelete} />}
         </div>
@@ -343,17 +377,120 @@ const Resources = () => {
                   Delete
                 </Button>
               </div>
-            </div>
+</div>
           </div>
         </div>
       )}
+
+      {/* Material Request Modal */}
+      {showRequestModal && requestingMaterial && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-display font-bold text-midnight">
+                  Request Material
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowRequestModal(false)}
+                >
+                  <ApperIcon name="X" size={16} />
+                </Button>
+              </div>
+              
+              <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                <div className="font-medium text-midnight">{requestingMaterial.name}</div>
+                <div className="text-sm text-slate-600">
+                  Current Stock: {requestingMaterial.quantityInStock} {requestingMaterial.unit}
+                </div>
+                <div className="text-sm text-slate-600">
+                  Reorder Level: {requestingMaterial.reorderLevel} {requestingMaterial.unit}
+                </div>
+              </div>
+              
+              <form onSubmit={handleMaterialRequest} className="space-y-4">
+                <div>
+                  <Label htmlFor="quantity">Quantity to Order *</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={requestForm.quantity}
+                    onChange={(e) => setRequestForm({ ...requestForm, quantity: e.target.value })}
+                    required
+                  />
+                  <div className="text-xs text-slate-500 mt-1">
+                    Unit: {requestingMaterial.unit}
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="urgency">Urgency</Label>
+                  <Select
+                    id="urgency"
+                    value={requestForm.urgency}
+                    onChange={(e) => setRequestForm({ ...requestForm, urgency: e.target.value })}
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Normal">Normal</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="notes">Notes</Label>
+                  <Input
+                    id="notes"
+                    value={requestForm.notes}
+                    onChange={(e) => setRequestForm({ ...requestForm, notes: e.target.value })}
+                    placeholder="Additional requirements or notes..."
+                  />
+                </div>
+                
+                <div className="flex justify-end space-x-3 pt-4">
+                  <Button type="button" variant="ghost" onClick={() => setShowRequestModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-construction hover:bg-construction/90">
+                    Submit Request
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+)}
     </div>
   );
 };
 
 // Materials Tab Component
-const MaterialsTab = ({ data, onEdit, onDelete }) => {
-  if (data.length === 0) {
+const MaterialsTab = ({ data, onEdit, onDelete, onRequest }) => {
+  const getLowStockCount = () => {
+    return data.filter(material => 
+      material.quantityInStock <= material.reorderLevel
+    ).length;
+  };
+
+  const getCriticalStockCount = () => {
+    return data.filter(material => 
+      material.status === 'Critical' || material.quantityInStock <= material.reorderLevel * 0.5
+    ).length;
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'In Stock': return 'success';
+      case 'Low Stock': return 'warning';
+      case 'Critical': return 'destructive';
+      case 'Ordered': return 'secondary';
+      default: return 'secondary';
+    }
+  };
+if (data.length === 0) {
     return (
       <div className="text-center py-12">
         <ApperIcon name="Package" size={48} className="mx-auto text-slate-400 mb-4" />
@@ -362,58 +499,119 @@ const MaterialsTab = ({ data, onEdit, onDelete }) => {
     );
   }
 
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-slate-200">
-            <th className="text-left py-3 px-4 font-semibold text-slate-700">Material</th>
-            <th className="text-left py-3 px-4 font-semibold text-slate-700">Category</th>
-            <th className="text-left py-3 px-4 font-semibold text-slate-700">Stock</th>
-            <th className="text-left py-3 px-4 font-semibold text-slate-700">Cost</th>
-            <th className="text-left py-3 px-4 font-semibold text-slate-700">Supplier</th>
-            <th className="text-right py-3 px-4 font-semibold text-slate-700">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((material) => (
-            <tr key={material.Id} className="border-b border-slate-100 hover:bg-slate-50">
-              <td className="py-4 px-4">
-                <div>
-                  <div className="font-medium text-midnight">{material.name}</div>
-                  <div className="text-sm text-slate-500">{material.description}</div>
-                </div>
-              </td>
-              <td className="py-4 px-4">
-                <Badge variant="secondary">{material.category}</Badge>
-              </td>
-              <td className="py-4 px-4">
-                <div className="text-sm">
-                  <div className="font-medium">{material.quantityInStock} {material.unit}</div>
-                  <div className="text-slate-500">Reorder: {material.reorderLevel}</div>
-                </div>
-              </td>
-              <td className="py-4 px-4">
-                <div className="font-medium">${material.unitCost.toFixed(2)}</div>
-                <div className="text-sm text-slate-500">per {material.unit}</div>
-              </td>
-              <td className="py-4 px-4">
-                <div className="text-sm text-slate-700">{material.supplier}</div>
-              </td>
-              <td className="py-4 px-4 text-right">
-                <div className="flex items-center justify-end space-x-2">
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(material)}>
-                    <ApperIcon name="Edit2" size={14} />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => onDelete(material)}>
-                    <ApperIcon name="Trash2" size={14} />
-                  </Button>
-                </div>
-              </td>
+  const lowStockCount = getLowStockCount();
+  const criticalStockCount = getCriticalStockCount();
+
+return (
+    <div className="space-y-4">
+      {/* Alert Summary */}
+      {(lowStockCount > 0 || criticalStockCount > 0) && (
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <ApperIcon name="AlertTriangle" size={20} className="text-orange-600" />
+            <div>
+              <h3 className="font-semibold text-orange-800">Stock Alerts</h3>
+              <p className="text-sm text-orange-700">
+                {criticalStockCount > 0 && `${criticalStockCount} critical stock item${criticalStockCount > 1 ? 's' : ''}`}
+                {criticalStockCount > 0 && lowStockCount > criticalStockCount && ', '}
+                {lowStockCount > criticalStockCount && `${lowStockCount - criticalStockCount} low stock item${lowStockCount - criticalStockCount > 1 ? 's' : ''}`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-slate-200">
+              <th className="text-left py-3 px-4 font-semibold text-slate-700">Material</th>
+              <th className="text-left py-3 px-4 font-semibold text-slate-700">Qty Needed</th>
+              <th className="text-left py-3 px-4 font-semibold text-slate-700">Qty Ordered</th>
+              <th className="text-left py-3 px-4 font-semibold text-slate-700">Qty Delivered</th>
+              <th className="text-left py-3 px-4 font-semibold text-slate-700">Stock Status</th>
+              <th className="text-left py-3 px-4 font-semibold text-slate-700">Supplier</th>
+              <th className="text-right py-3 px-4 font-semibold text-slate-700">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+        </thead>
+<tbody>
+            {data.map((material) => {
+              const isLowStock = material.quantityInStock <= material.reorderLevel;
+              const isCritical = material.status === 'Critical' || material.quantityInStock <= material.reorderLevel * 0.5;
+              
+              return (
+                <tr key={material.Id} className={`border-b border-slate-100 hover:bg-slate-50 ${isCritical ? 'bg-red-25' : isLowStock ? 'bg-orange-25' : ''}`}>
+                  <td className="py-4 px-4">
+                    <div className="flex items-start space-x-3">
+                      {isCritical && <ApperIcon name="AlertCircle" size={16} className="text-red-500 mt-0.5" />}
+                      {isLowStock && !isCritical && <ApperIcon name="AlertTriangle" size={16} className="text-orange-500 mt-0.5" />}
+                      <div className="flex-1">
+                        <div className="font-medium text-midnight">{material.name}</div>
+                        <div className="text-sm text-slate-500">{material.category}</div>
+                        <div className="text-xs text-slate-400">${material.unitCost.toFixed(2)}/{material.unit}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm">
+                      <div className="font-medium">{material.quantityNeeded || 0} {material.unit}</div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm">
+                      <div className="font-medium">{material.quantityOrdered || 0} {material.unit}</div>
+                      {material.expectedDelivery && (
+                        <div className="text-xs text-slate-500">
+                          Expected: {new Date(material.expectedDelivery).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm">
+                      <div className="font-medium">{material.quantityDelivered || 0} {material.unit}</div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="space-y-2">
+                      <Badge variant={getStatusColor(material.status)} size="sm">{material.status}</Badge>
+                      <div className="text-sm">
+                        <div className="font-medium">{material.quantityInStock} {material.unit} in stock</div>
+                        <div className="text-xs text-slate-500">
+                          Reorder at: {material.reorderLevel} {material.unit}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm text-slate-700">{material.supplier}</div>
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    <div className="flex items-center justify-end space-x-2">
+                      {isLowStock && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => onRequest(material)}
+                          className="text-construction border-construction hover:bg-construction/10"
+                        >
+                          <ApperIcon name="ShoppingCart" size={14} />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => onEdit(material)}>
+                        <ApperIcon name="Edit2" size={14} />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => onDelete(material)}>
+                        <ApperIcon name="Trash2" size={14} />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+})}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
@@ -639,6 +837,33 @@ const MaterialForm = ({ form, setForm }) => (
       />
     </div>
     <div>
+      <Label htmlFor="quantityNeeded">Quantity Needed</Label>
+      <Input
+        id="quantityNeeded"
+        type="number"
+        value={form.quantityNeeded}
+        onChange={(e) => setForm({ ...form, quantityNeeded: e.target.value })}
+      />
+    </div>
+    <div>
+      <Label htmlFor="quantityOrdered">Quantity Ordered</Label>
+      <Input
+        id="quantityOrdered"
+        type="number"
+        value={form.quantityOrdered}
+        onChange={(e) => setForm({ ...form, quantityOrdered: e.target.value })}
+      />
+    </div>
+    <div>
+      <Label htmlFor="quantityDelivered">Quantity Delivered</Label>
+      <Input
+        id="quantityDelivered"
+        type="number"
+        value={form.quantityDelivered}
+        onChange={(e) => setForm({ ...form, quantityDelivered: e.target.value })}
+      />
+    </div>
+    <div>
       <Label htmlFor="unitCost">Unit Cost</Label>
       <Input
         id="unitCost"
@@ -656,6 +881,19 @@ const MaterialForm = ({ form, setForm }) => (
         value={form.reorderLevel}
         onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })}
       />
+    </div>
+    <div>
+      <Label htmlFor="status">Status</Label>
+      <Select
+        id="status"
+        value={form.status}
+        onChange={(e) => setForm({ ...form, status: e.target.value })}
+      >
+        <option value="In Stock">In Stock</option>
+        <option value="Low Stock">Low Stock</option>
+        <option value="Critical">Critical</option>
+        <option value="Ordered">Ordered</option>
+      </Select>
     </div>
     <div>
       <Label htmlFor="supplier">Supplier *</Label>

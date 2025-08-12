@@ -7,8 +7,8 @@ import Projects from "@/components/pages/Projects";
 import Tasks from "@/components/pages/Tasks";
 import Dashboard from "@/components/pages/Dashboard";
 import Resources from "@/components/pages/Resources";
+import Materials from "@/components/pages/Materials";
 import PlaceholderPage from "@/components/pages/PlaceholderPage";
-
 function App() {
   return (
     <BrowserRouter>
@@ -17,9 +17,10 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="projects" element={<Projects />} />
-            <Route path="projects/:id" element={<ProjectDetail />} />
-<Route path="tasks" element={<Tasks />} />
+<Route path="projects/:id" element={<ProjectDetail />} />
+            <Route path="tasks" element={<Tasks />} />
             <Route path="resources" element={<Resources />} />
+            <Route path="materials" element={<Materials />} />
             <Route path="financials" element={<PlaceholderPage title="Financials" description="Track budgets, expenses, and financial reporting" icon="DollarSign" features={["Budget tracking", "Expense management", "Invoice generation", "Financial reports"]} />} />
             <Route path="reports" element={<PlaceholderPage title="Reports" description="Generate insights and analytics for your projects" icon="BarChart3" features={["Project analytics", "Progress reports", "Budget analysis", "Performance metrics"]} />} />
           </Route>

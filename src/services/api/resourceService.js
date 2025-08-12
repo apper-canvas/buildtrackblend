@@ -29,14 +29,75 @@ export const materialService = {
     return material ? deepCopy(material) : null;
   },
 
-  create: (materialData) => {
+create: (materialData) => {
     const newMaterial = {
       ...materialData,
-      Id: getNextId(materials)
+      Id: getNextId(materials),
+      quantityNeeded: materialData.quantityNeeded || 0,
+      quantityOrdered: materialData.quantityOrdered || 0,
+      quantityDelivered: materialData.quantityDelivered || 0,
+      status: materialData.status || 'In Stock',
+      expectedDelivery: materialData.expectedDelivery || null
     };
     materials.push(newMaterial);
     toast.success(`Material "${newMaterial.name}" created successfully`);
     return deepCopy(newMaterial);
+  },
+
+  requestMaterial: (materialId, quantity, notes) => {
+    const numId = parseInt(materialId);
+    if (isNaN(numId)) {
+      throw new Error('Material ID must be a number');
+    }
+    
+    const index = materials.findIndex(m => m.Id === numId);
+    if (index === -1) {
+      throw new Error('Material not found');
+    }
+
+    const material = materials[index];
+    const updatedMaterial = {
+      ...material,
+      quantityOrdered: (material.quantityOrdered || 0) + quantity,
+      status: 'Ordered',
+      lastOrdered: new Date().toISOString(),
+      expectedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+    };
+    
+    materials[index] = updatedMaterial;
+    toast.success(`Material request submitted for ${quantity} ${material.unit} of ${material.name}`);
+    return deepCopy(updatedMaterial);
+  },
+
+  updateDelivery: (materialId, deliveredQuantity) => {
+    const numId = parseInt(materialId);
+    if (isNaN(numId)) {
+      throw new Error('Material ID must be a number');
+    }
+    
+    const index = materials.findIndex(m => m.Id === numId);
+    if (index === -1) {
+      throw new Error('Material not found');
+    }
+
+    const material = materials[index];
+    const newStockQuantity = material.quantityInStock + deliveredQuantity;
+    const newDeliveredQuantity = (material.quantityDelivered || 0) + deliveredQuantity;
+    
+    let status = 'In Stock';
+    if (newStockQuantity <= material.reorderLevel) {
+      status = newStockQuantity <= material.reorderLevel * 0.5 ? 'Critical' : 'Low Stock';
+    }
+
+    materials[index] = {
+      ...material,
+      quantityInStock: newStockQuantity,
+      quantityDelivered: newDeliveredQuantity,
+      status: status
+    };
+    
+    toast.success(`Updated delivery: ${deliveredQuantity} ${material.unit} of ${material.name}`);
+    return deepCopy(materials[index]);
   },
 
   update: (id, materialData) => {
